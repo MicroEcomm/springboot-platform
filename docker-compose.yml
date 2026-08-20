@@ -1,0 +1,448 @@
+version: '3.8'
+
+# =============================================================================
+# Reusable YAML anchors
+# =============================================================================
+x-build-defaults: &build-defaults
+  context: .
+  dockerfile: Dockerfile
+
+x-common-env: &common-env
+  SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+  EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+  SPRING_DATASOURCE_USERNAME: postgres
+  SPRING_DATASOURCE_PASSWORD: password
+  SPRING_DATA_REDIS_HOST: redis
+  SPRING_DATA_REDIS_PORT: "6379"
+  SPRING_RABBITMQ_HOST: rabbitmq
+  SPRING_RABBITMQ_PORT: "5672"
+  SPRING_RABBITMQ_USERNAME: guest
+  SPRING_RABBITMQ_PASSWORD: guest
+  JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m"
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "3"
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  networks:
+    - ecommerce-network
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+    config-server:
+      condition: service_healthy
+    discovery-server:
+      condition: service_healthy
+
+# =============================================================================
+# Services
+# =============================================================================
+services:
+
+  # ─── Infrastructure ─────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    command: ["postgres", "-c", "max_connections=500"]
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_MULTIPLE_DATABASES: "auth_db,user_db,product_db,category_db,brand_db,inventory_db,cart_db,wishlist_db,order_db,payment_db,coupon_db,shipping_db,review_db,notification_db,seller_db,audit_db"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - ecommerce-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq_msg
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - ecommerce-network
+
+  # ─── Spring Cloud Infrastructure ────────────────────────────────────────────
+
+  config-server:
+    container_name: config-server
+    restart: unless-stopped
+    networks:
+      - ecommerce-network
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: config-server
+    ports:
+      - "8888:8888"
+    environment:
+      SERVER_PORT: "8888"
+      SPRING_PROFILES_ACTIVE: native
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:///config-repo
+    volumes:
+      - ./config-repo:/config-repo:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8888/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  discovery-server:
+    container_name: discovery-server
+    restart: unless-stopped
+    networks:
+      - ecommerce-network
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: discovery-server
+    ports:
+      - "8761:8761"
+    environment:
+      SERVER_PORT: "8761"
+      SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ─── API Gateway ────────────────────────────────────────────────────────────
+
+  api-gateway:
+    <<: *service-defaults
+    container_name: api-gateway
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8080"
+
+  # ─── Phase 1: Core Business Services ────────────────────────────────────────
+
+  auth-service:
+    <<: *service-defaults
+    container_name: auth-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8081"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
+
+  user-service:
+    <<: *service-defaults
+    container_name: user-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: user-service
+    ports:
+      - "8082:8082"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8082"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/user_db
+
+  product-service:
+    <<: *service-defaults
+    container_name: product-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: product-service
+    ports:
+      - "8083:8083"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8083"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/product_db
+
+  category-service:
+    <<: *service-defaults
+    container_name: category-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: category-service
+    ports:
+      - "8084:8084"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8084"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/category_db
+
+  brand-service:
+    <<: *service-defaults
+    container_name: brand-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: brand-service
+    ports:
+      - "8085:8085"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8085"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/brand_db
+
+  # ─── Phase 2: Shopping Services ─────────────────────────────────────────────
+
+  inventory-service:
+    <<: *service-defaults
+    container_name: inventory-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: inventory-service
+    ports:
+      - "8086:8086"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8086"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventory_db
+
+  cart-service:
+    <<: *service-defaults
+    container_name: cart-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: cart-service
+    ports:
+      - "8087:8087"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8087"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cart_db
+
+  wishlist-service:
+    <<: *service-defaults
+    container_name: wishlist-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: wishlist-service
+    ports:
+      - "8088:8088"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8088"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wishlist_db
+
+  search-service:
+    <<: *service-defaults
+    container_name: search-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: search-service
+    ports:
+      - "8089:8089"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8089"
+
+  # ─── Phase 3: Order Saga ─────────────────────────────────────────────────────
+
+  order-service:
+    <<: *service-defaults
+    container_name: order-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: order-service
+    ports:
+      - "8090:8090"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8090"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/order_db
+
+  payment-service:
+    <<: *service-defaults
+    container_name: payment-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: payment-service
+    ports:
+      - "8091:8091"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8091"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payment_db
+
+  coupon-service:
+    <<: *service-defaults
+    container_name: coupon-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: coupon-service
+    ports:
+      - "8092:8092"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8092"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/coupon_db
+
+  shipping-service:
+    <<: *service-defaults
+    container_name: shipping-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: shipping-service
+    ports:
+      - "8093:8093"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8093"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/shipping_db
+
+  # ─── Phase 4: Platform Services ──────────────────────────────────────────────
+
+  review-service:
+    <<: *service-defaults
+    container_name: review-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: review-service
+    ports:
+      - "8094:8094"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8094"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/review_db
+
+  notification-service:
+    <<: *service-defaults
+    container_name: notification-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: notification-service
+    ports:
+      - "8095:8095"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8095"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notification_db
+
+  seller-service:
+    <<: *service-defaults
+    container_name: seller-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: seller-service
+    ports:
+      - "8096:8096"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8096"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/seller_db
+
+  admin-service:
+    <<: *service-defaults
+    container_name: admin-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: admin-service
+    ports:
+      - "8097:8097"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8097"
+
+  report-service:
+    <<: *service-defaults
+    container_name: report-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: report-service
+    ports:
+      - "8098:8098"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8098"
+
+  audit-service:
+    <<: *service-defaults
+    container_name: audit-service
+    build:
+      <<: *build-defaults
+      args:
+        SERVICE_NAME: audit-service
+    ports:
+      - "8099:8099"
+    environment:
+      <<: *common-env
+      SERVER_PORT: "8099"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/audit_db
+
+# =============================================================================
+# Networks & Volumes
+# =============================================================================
+networks:
+  ecommerce-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

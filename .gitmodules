@@ -1,66 +1,66 @@
 [submodule "admin-service"]
 	path = admin-service
-	url = https://github.com/MicroEcomm/admin-service
+	url = git@github.com:MicroEcomm/admin-service
 [submodule "api-gateway"]
 	path = api-gateway
-	url = https://github.com/MicroEcomm/api-gateway
+	url = git@github.com:MicroEcomm/api-gateway
 [submodule "audit-service"]
 	path = audit-service
-	url = https://github.com/MicroEcomm/audit-service
+	url = git@github.com:MicroEcomm/audit-service
 [submodule "auth-service"]
 	path = auth-service
-	url = https://github.com/MicroEcomm/auth-service
+	url = git@github.com:MicroEcomm/auth-service
 [submodule "brand-service"]
 	path = brand-service
-	url = https://github.com/MicroEcomm/brand-service
+	url = git@github.com:MicroEcomm/brand-service
 [submodule "cart-service"]
 	path = cart-service
-	url = https://github.com/MicroEcomm/cart-service
+	url = git@github.com:MicroEcomm/cart-service
 [submodule "category-service"]
 	path = category-service
-	url = https://github.com/MicroEcomm/category-service
+	url = git@github.com:MicroEcomm/category-service
 [submodule "config-server"]
 	path = config-server
-	url = https://github.com/MicroEcomm/config-server
+	url = git@github.com:MicroEcomm/config-server
 [submodule "coupon-service"]
 	path = coupon-service
-	url = https://github.com/MicroEcomm/coupon-service
+	url = git@github.com:MicroEcomm/coupon-service
 [submodule "discovery-server"]
 	path = discovery-server
-	url = https://github.com/MicroEcomm/discovery-server
+	url = git@github.com:MicroEcomm/discovery-server
 [submodule "inventory-service"]
 	path = inventory-service
-	url = https://github.com/MicroEcomm/inventory-service
+	url = git@github.com:MicroEcomm/inventory-service
 [submodule "notification-service"]
 	path = notification-service
-	url = https://github.com/MicroEcomm/notification-service
+	url = git@github.com:MicroEcomm/notification-service
 [submodule "order-service"]
 	path = order-service
-	url = https://github.com/MicroEcomm/order-service
+	url = git@github.com:MicroEcomm/order-service
 [submodule "payment-service"]
 	path = payment-service
-	url = https://github.com/MicroEcomm/payment-service
+	url = git@github.com:MicroEcomm/payment-service
 [submodule "product-service"]
 	path = product-service
-	url = https://github.com/MicroEcomm/product-service
+	url = git@github.com:MicroEcomm/product-service
 [submodule "report-service"]
 	path = report-service
-	url = https://github.com/MicroEcomm/report-service
+	url = git@github.com:MicroEcomm/report-service
 [submodule "review-service"]
 	path = review-service
-	url = https://github.com/MicroEcomm/review-service
+	url = git@github.com:MicroEcomm/review-service
 [submodule "search-service"]
 	path = search-service
-	url = https://github.com/MicroEcomm/search-service
+	url = git@github.com:MicroEcomm/search-service
 [submodule "seller-service"]
 	path = seller-service
-	url = https://github.com/MicroEcomm/seller-service
+	url = git@github.com:MicroEcomm/seller-service
 [submodule "shipping-service"]
 	path = shipping-service
-	url = https://github.com/MicroEcomm/shipping-service
+	url = git@github.com:MicroEcomm/shipping-service
 [submodule "user-service"]
 	path = user-service
-	url = https://github.com/MicroEcomm/user-service
+	url = git@github.com:MicroEcomm/user-service
 [submodule "wishlist-service"]
 	path = wishlist-service
-	url = https://github.com/MicroEcomm/wishlist-service
+	url = git@github.com:MicroEcomm/wishlist-service

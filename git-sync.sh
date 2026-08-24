@@ -134,7 +134,7 @@ git submodule foreach "
     
     if [ -n \"\$LOCAL_COMMIT\" ] && [ \"\$LOCAL_COMMIT\" != \"\$REMOTE_COMMIT\" ]; then
         echo 'Pushing \$name...'
-        git push origin HEAD:main || echo '⚠️ Failed to push \$name. Check authentication.'
+        git push origin HEAD:refs/heads/main || echo '⚠️ Failed to push \$name. Check authentication.'
     else
         echo '\$name is up to date.'
     fi

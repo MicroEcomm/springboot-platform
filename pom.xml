@@ -69,6 +69,12 @@
                 <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
                 <version>${springdoc.version}</version>
             </dependency>
+            <!-- Flyway PostgreSQL driver — required for Spring Boot 3.2 / Flyway 9+ -->
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-database-postgresql</artifactId>
+                <version>10.10.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

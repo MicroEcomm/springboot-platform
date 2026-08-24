@@ -1,0 +1,12 @@
+# Config for coupon-service
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/coupon_db
+    username: postgres
+    password: password
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000

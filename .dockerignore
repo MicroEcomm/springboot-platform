@@ -1,0 +1,39 @@
+# Git
+.git/
+.gitignore
+.gitmodules
+
+# IDE / Editor files
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+
+# Maven build outputs
+**/target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Maven wrapper
+.mvn/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docs
+docs/
+
+# Scripts (not needed in image)
+git-sync.sh
+init-git.sh
+
+# Docker compose is not needed inside images
+docker-compose.yml
+
+# Config repo is mounted as a volume — not baked in
+# (config-server service mounts it explicitly)

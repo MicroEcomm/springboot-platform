@@ -1,5 +1,3 @@
-version: '3.8'
-
 # =============================================================================
 # Reusable YAML anchors
 # =============================================================================
@@ -282,9 +280,19 @@ services:
       SERVER_PORT: "8088"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wishlist_db
 
+  # search-service uses only Redis — override depends_on to NOT wait for postgres
   search-service:
-    <<: *service-defaults
     container_name: search-service
+    restart: unless-stopped
+    networks:
+      - ecommerce-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
     build:
       <<: *build-defaults
       args:
@@ -397,9 +405,19 @@ services:
       SERVER_PORT: "8096"
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/seller_db
 
+  # admin-service and report-service use only Redis — override depends_on
   admin-service:
-    <<: *service-defaults
     container_name: admin-service
+    restart: unless-stopped
+    networks:
+      - ecommerce-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
     build:
       <<: *build-defaults
       args:
@@ -411,8 +429,17 @@ services:
       SERVER_PORT: "8097"
 
   report-service:
-    <<: *service-defaults
     container_name: report-service
+    restart: unless-stopped
+    networks:
+      - ecommerce-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
     build:
       <<: *build-defaults
       args:
